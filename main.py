@@ -1,67 +1,138 @@
-from crewai import Agent, Task, Crew
+from crewai import Task, Crew
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-# Product Agent
-product_agent = Agent(
-    role="Etsy Product Expert",
-    goal="Generate profitable Etsy digital product ideas",
-    backstory="""
-    You are an expert Etsy seller specializing
-    in digital products and trending niches.
-    """,
-    verbose=True
+# Import agents
+from agents.product_agent import product_agent
+from agents.seo_agent import seo_agent
+from agents.prompt_agent import prompt_agent
+
+# Import image generator
+from generators.image_generator import generate_image
+
+# Import utility functions
+from utils.file_manager import (
+    create_product_folder,
+    save_text_file
 )
 
-# Prompt Agent
-prompt_agent = Agent(
-    role="AI Image Prompt Creator",
-    goal="Generate detailed AI art prompts for Etsy products",
-    backstory="""
-    You are an expert AI prompt engineer specializing
-    in commercial Etsy artwork.
-    """,
-    verbose=True
-)
+# -----------------------------------
+# PRODUCT TASK
+# -----------------------------------
 
-# Product Task
 product_task = Task(
     description="""
-    Generate 5 trending Etsy PNG bundle ideas
-    for the retro gaming niche.
+    Generate a trending Etsy digital product idea
+    in the retro gaming niche.
     """,
     expected_output="""
-    A list of Etsy product ideas including:
-    - product name
+    Include:
+    - product title
+    - product description
     - target audience
-    - SEO keywords
-    - short description
     """,
     agent=product_agent
 )
 
-# Prompt Task
-prompt_task = Task(
+# -----------------------------------
+# SEO TASK
+# -----------------------------------
+
+seo_task = Task(
     description="""
-    Create highly detailed AI image prompts
-    for the Etsy products generated previously.
+    Generate Etsy SEO keywords and tags
+    for the generated product.
     """,
     expected_output="""
-    Detailed AI art prompts suitable for
-    DALL-E or Leonardo AI image generation.
+    A list of Etsy SEO tags and keywords.
+    """,
+    agent=seo_agent
+)
+
+# -----------------------------------
+# PROMPT TASK
+# -----------------------------------
+
+prompt_task = Task(
+    description="""
+    Generate an AI image prompt for the Etsy product.
+    """,
+    expected_output="""
+    A detailed AI image prompt suitable
+    for image generation.
     """,
     agent=prompt_agent
 )
 
-# Create Crew
+# -----------------------------------
+# CREATE CREW
+# -----------------------------------
+
 crew = Crew(
-    agents=[product_agent, prompt_agent],
-    tasks=[product_task, prompt_task]
+    agents=[
+        product_agent,
+        seo_agent,
+        prompt_agent
+    ],
+    tasks=[
+        product_task,
+        seo_task,
+        prompt_task
+    ],
+    verbose=True
 )
 
-# Run Crew
+# -----------------------------------
+# RUN CREW
+# -----------------------------------
+
 result = crew.kickoff()
 
+print("\n=== AI PRODUCT RESULTS ===\n")
 print(result)
+
+# -----------------------------------
+# CREATE PRODUCT FOLDER
+# -----------------------------------
+
+folder_path = create_product_folder(
+    "retro_arcade_bundle"
+)
+
+# -----------------------------------
+# SAVE AI OUTPUTS
+# -----------------------------------
+
+save_text_file(
+    folder_path,
+    "output.txt",
+    str(result)
+)
+
+# -----------------------------------
+# IMAGE PROMPT
+# -----------------------------------
+
+image_prompt = """
+Cute pixel art arcade machine,
+retro gaming aesthetic,
+8-bit style,
+bright neon colors,
+simple clean background,
+digital sticker design
+"""
+
+# -----------------------------------
+# GENERATE IMAGE
+# -----------------------------------
+
+image_path = f"{folder_path}/product_image.png"
+
+generate_image(
+    image_prompt,
+    image_path
+)
+
+print("\nProduct pipeline completed successfully!")
