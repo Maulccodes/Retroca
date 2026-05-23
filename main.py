@@ -1,3 +1,4 @@
+from generators.json_exporter import export_product_json
 from crewai import Task, Crew
 from dotenv import load_dotenv
 
@@ -17,6 +18,8 @@ from utils.file_manager import (
     create_product_folder,
     save_text_file
 )
+
+from utils.database_manager import add_product
 
 # -----------------------------------
 # PRODUCT TASK
@@ -85,54 +88,77 @@ crew = Crew(
 )
 
 # -----------------------------------
-# RUN CREW
+# BULK PRODUCT GENERATION
 # -----------------------------------
 
-result = crew.kickoff()
+number_of_products = 5
 
-print("\n=== AI PRODUCT RESULTS ===\n")
-print(result)
+for i in range(number_of_products):
 
-# -----------------------------------
-# CREATE PRODUCT FOLDER
-# -----------------------------------
+    print(f"\nGenerating Product {i+1}...\n")
 
-folder_path = create_product_folder(
-    "retro_arcade_bundle"
-)
+    # Run AI Crew
+    result = crew.kickoff()
 
-# -----------------------------------
-# SAVE AI OUTPUTS
-# -----------------------------------
+    print(result)
 
-save_text_file(
-    folder_path,
-    "output.txt",
-    str(result)
-)
+    # Create unique folder
+    folder_path = create_product_folder(
+        f"retro_arcade_bundle_{i+1}"
+    )
 
-# -----------------------------------
-# IMAGE PROMPT
-# -----------------------------------
+    # Save AI output
+    save_text_file(
+        folder_path,
+        "output.txt",
+        str(result)
+    )
 
-image_prompt = """
-Cute pixel art arcade machine,
-retro gaming aesthetic,
-8-bit style,
-bright neon colors,
-simple clean background,
-digital sticker design
-"""
+    # Image prompt
+    image_prompt = f"""
+    Cute pixel art arcade machine,
+    retro gaming aesthetic,
+    8-bit style,
+    neon colors,
+    product variation {i+1}
+    """
 
-# -----------------------------------
-# GENERATE IMAGE
-# -----------------------------------
+    # Image output path
+    image_path = f"{folder_path}/product_image.png"
 
-image_path = f"{folder_path}/product_image.png"
+    # Generate image
+    generate_image(
+        image_prompt,
+        image_path
+    )
 
-generate_image(
-    image_prompt,
-    image_path
-)
+        # -----------------------------------
+    # STRUCTURED PRODUCT DATA
+    # -----------------------------------
 
-print("\nProduct pipeline completed successfully!")
+    product_data = {
+        "product_number": i + 1,
+        "title": f"Retro Arcade Bundle {i+1}",
+        "description": str(result),
+        "image_prompt": image_prompt,
+        "image_path": image_path,
+        "tags": [
+            "retro gaming",
+            "pixel art",
+            "arcade",
+            "8-bit",
+            "gaming png"
+        ]
+    }
+
+    # Export JSON
+    export_product_json(
+        folder_path,
+        product_data
+    )
+
+    # Add product to master database
+    add_product(product_data)
+
+    print(f"\nProduct {i+1} completed!\n")
+
