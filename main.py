@@ -9,6 +9,7 @@ load_dotenv()
 from agents.product_agent import product_agent
 from agents.seo_agent import seo_agent
 from agents.prompt_agent import prompt_agent
+from agents.trend_agent import trend_agent
 
 # Import image generator
 from generators.image_generator import generate_image
@@ -22,13 +23,36 @@ from utils.file_manager import (
 from utils.database_manager import add_product
 
 # -----------------------------------
+# TREND TASK
+# -----------------------------------
+
+trend_task = Task(
+    description="""
+    Research a trending Etsy digital product niche
+    related to gaming, retro aesthetics,
+    internet culture, or digital art.
+    """,
+
+    expected_output="""
+    Include:
+    - niche
+    - target audience
+    - aesthetic style
+    - seasonal opportunity
+    """,
+
+    agent=trend_agent
+)
+
+# -----------------------------------
 # PRODUCT TASK
 # -----------------------------------
 
 product_task = Task(
     description="""
-    Generate a trending Etsy digital product idea
-    in the retro gaming niche.
+    Generate a high-quality Etsy digital product idea
+    based on the trending niche discovered
+    by the Trend Research Specialist.
     """,
     expected_output="""
     Include:
@@ -46,7 +70,7 @@ product_task = Task(
 seo_task = Task(
     description="""
     Generate Etsy SEO keywords and tags
-    for the generated product.
+    based on the trending niche and product idea.
     """,
     expected_output="""
     A list of Etsy SEO tags and keywords.
@@ -60,7 +84,10 @@ seo_task = Task(
 
 prompt_task = Task(
     description="""
-    Generate an AI image prompt for the Etsy product.
+    Generate a cinematic AI image prompt
+    based on the discovered trend,
+    target audience,
+    and generated product idea.
     """,
     expected_output="""
     A detailed AI image prompt suitable
@@ -75,15 +102,17 @@ prompt_task = Task(
 
 crew = Crew(
     agents=[
-        product_agent,
-        seo_agent,
-        prompt_agent
-    ],
+    trend_agent,
+    product_agent,
+    seo_agent,
+    prompt_agent
+],
     tasks=[
-        product_task,
-        seo_task,
-        prompt_task
-    ],
+    trend_task,
+    product_task,
+    seo_task,
+    prompt_task
+],
     verbose=True
 )
 
