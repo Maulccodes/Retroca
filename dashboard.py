@@ -65,45 +65,66 @@ if st.button("🚀 Generate Products"):
     st.write(products)
 
 # -----------------------------------
-# DATABASE SECTION
+# PRODUCT GALLERY
 # -----------------------------------
 
-st.header("📦 Product Database")
+st.header("🖼️ Retroca Product Gallery")
 
 database_file = "database/products.json"
 
-# Check database exists
+# Check if database exists
 if os.path.exists(database_file):
 
     with open(database_file, "r") as file:
         products = json.load(file)
 
-    # Display products
-    for product in products:
+    # Reverse newest first
+    products = products[::-1]
 
-        st.subheader(product.get("title"))
+    # Create 3-column gallery
+    cols = st.columns(3)
 
-        st.write(
-            product.get("description")
-        )
+    for index, product in enumerate(products):
 
-        st.write(
-            f"Tags: {product.get('tags')}"
-        )
+        col = cols[index % 3]
 
-        # Display image if exists
-        image_path = product.get("image_path")
+        with col:
 
-        if image_path and os.path.exists(image_path):
-
-            st.image(
-                image_path,
-                width=250
+            st.subheader(
+                product.get("title", "Untitled Product")
             )
 
-        st.divider()
+            image_path = product.get("image_path")
+
+            # Show image
+            if image_path and os.path.exists(image_path):
+
+                st.image(
+                    image_path,
+                    use_container_width=True
+                )
+
+            # Description
+            st.write(
+                product.get(
+                    "description",
+                    "No description"
+                )[:200] + "..."
+            )
+
+            # Tags
+            tags = product.get("tags", [])
+
+            if tags:
+
+                st.caption(
+                    " | ".join(tags)
+                )
+
+            st.divider()
 
 else:
+
     st.warning(
-        "No products database found yet."
+        "No generated products found yet."
     )
