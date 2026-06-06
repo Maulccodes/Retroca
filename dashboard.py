@@ -3,6 +3,7 @@ import json
 import os
 
 from collections import Counter
+from datetime import datetime, timedelta
 
 from utils.download_manager import (
     increment_downloads
@@ -77,7 +78,11 @@ if st.button("🚀 Generate Products"):
 
     with st.spinner("Generating AI products..."):
 
-        generate_products(quantity)
+        generate_products(
+    quantity,
+    niche,
+    style
+)
 
     st.success(
         f"{quantity} products generated successfully!"
@@ -170,6 +175,155 @@ metric5.metric(
     "Favorites",
     favorite_count
 )
+
+# -----------------------------------
+# WEEKLY PRODUCT COUNT
+# -----------------------------------
+
+today = datetime.now()
+
+week_ago = today - timedelta(days=7)
+
+weekly_products = 0
+
+for product in products:
+
+    created_at = product.get(
+        "created_at"
+    )
+
+    if created_at:
+
+        try:
+
+            created_date = (
+                datetime.strptime(
+                    created_at,
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            )
+
+            if created_date >= week_ago:
+
+                weekly_products += 1
+
+        except:
+            pass
+
+st.metric(
+    "📅 Products This Week",
+    weekly_products
+)
+
+# -----------------------------------
+# MONTHLY PRODUCT COUNT
+# -----------------------------------
+
+month_ago = today - timedelta(days=30)
+
+monthly_products = 0
+
+for product in products:
+
+    created_at = product.get(
+        "created_at"
+    )
+
+    if created_at:
+
+        try:
+
+            created_date = (
+                datetime.strptime(
+                    created_at,
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            )
+
+            if created_date >= month_ago:
+
+                monthly_products += 1
+
+        except:
+            pass
+
+st.metric(
+    "📅 Products This Month",
+    monthly_products
+)
+
+# -----------------------------------
+# GROWTH RATE
+# -----------------------------------
+
+growth_rate = 0
+
+if monthly_products > 0:
+
+    growth_rate = round(
+        (
+            weekly_products
+            / monthly_products
+        ) * 100,
+        2
+    )
+
+st.metric(
+    "📈 Growth Rate",
+    f"{growth_rate}%"
+)
+
+# -----------------------------------
+# PERFORMANCE SCORE
+# -----------------------------------
+
+def calculate_score(product):
+
+    score = 0
+
+    score += (
+        product.get(
+            "downloads",
+            0
+        ) * 5
+    )
+
+    if product.get(
+        "status"
+    ) == "ready":
+
+        score += 10
+
+    if product.get(
+        "status"
+    ) == "published":
+
+        score += 25
+
+    return score
+
+# -----------------------------------
+# TRENDING PRODUCTS
+# -----------------------------------
+
+st.subheader(
+    "🔥 Trending Products"
+)
+
+trending_products = sorted(
+    products,
+    key=calculate_score,
+    reverse=True
+)
+
+for product in trending_products[:5]:
+
+    st.write(
+        f"🔥 "
+        f"{product.get('title')} "
+        f"(Score: "
+        f"{calculate_score(product)})"
+    )
 
 # -----------------------------------
 # STATUS CHART
@@ -320,6 +474,72 @@ for tag, count in top_tags:
 
     st.write(
         f"{tag} ({count})"
+    )
+
+# -----------------------------------
+# PRODUCTS PER DAY
+# -----------------------------------
+
+daily_counts = Counter()
+
+for product in products:
+
+    created_at = product.get(
+        "created_at"
+    )
+
+    if created_at:
+
+        date_only = (
+            created_at.split(" ")[0]
+        )
+
+        daily_counts[
+            date_only
+        ] += 1
+
+st.subheader(
+    "📈 Products Generated Per Day"
+)
+
+if daily_counts:
+
+    st.line_chart(
+        daily_counts
+    )
+
+status_counts = {
+    "Draft": draft_count,
+    "Ready": ready_count,
+    "Published": published_count
+}
+
+st.subheader(
+    "📊 Status Distribution"
+)
+
+st.bar_chart(
+    status_counts
+)
+
+st.subheader(
+    "📝 Recent Activity"
+)
+
+recent_products = sorted(
+    products,
+    key=lambda p: p.get(
+        "created_at",
+        ""
+    ),
+    reverse=True
+)
+
+for product in recent_products[:5]:
+
+    st.write(
+        f"Created: "
+        f"{product.get('title')}"
     )
 
 # -----------------------------------
@@ -541,18 +761,15 @@ if filtered_products:
         for product in filtered_products
     ]
 
-    selected_product_title = (
-        st.selectbox(
-            "Select Product",
-            product_titles
-        )
+    selected_product_title = st.selectbox(
+        "Select Product",
+        product_titles
     )
 
     selected_product = next(
         (
             product
-            for product
-            in filtered_products
+            for product in filtered_products
             if product.get("title")
             == selected_product_title
         ),
@@ -561,25 +778,26 @@ if filtered_products:
 
     if selected_product:
 
-        title = (
-            selected_product.get(
-                "title"
-            )
+        title = selected_product.get(
+            "title",
+            "Untitled Product"
         )
 
         st.subheader(title)
 
+        # -----------------------------------
         # FAVORITES
+        # -----------------------------------
 
         is_favorite = (
-            title
-            in favorite_titles
+            title in favorite_titles
         )
 
         if not is_favorite:
 
             if st.button(
-                "⭐ Add Favorite"
+                "⭐ Add Favorite",
+                key="add_favorite_button"
             ):
 
                 add_favorite(
@@ -595,7 +813,8 @@ if filtered_products:
         else:
 
             if st.button(
-                "❌ Remove Favorite"
+                "❌ Remove Favorite",
+                key="remove_favorite_button"
             ):
 
                 remove_favorite(
@@ -608,12 +827,12 @@ if filtered_products:
 
                 st.rerun()
 
+        # -----------------------------------
         # IMAGE
+        # -----------------------------------
 
-        image_path = (
-            selected_product.get(
-                "image_path"
-            )
+        image_path = selected_product.get(
+            "image_path"
         )
 
         if (
@@ -628,7 +847,9 @@ if filtered_products:
                 width=500
             )
 
+        # -----------------------------------
         # DESCRIPTION
+        # -----------------------------------
 
         st.markdown(
             "### Description"
@@ -641,7 +862,9 @@ if filtered_products:
             )
         )
 
+        # -----------------------------------
         # TAGS
+        # -----------------------------------
 
         st.markdown(
             "### Tags"
@@ -654,7 +877,9 @@ if filtered_products:
             )
         )
 
+        # -----------------------------------
         # METADATA
+        # -----------------------------------
 
         st.markdown(
             "### Metadata"
@@ -668,48 +893,55 @@ if filtered_products:
             f"Created: {selected_product.get('created_at', 'Not Available')}"
         )
 
-        current_status = (
-    selected_product.get(
-        "status",
-        "draft"
-        )
-    )
-
-    status_options = [
-        "draft",
-        "ready",
-        "published",
-        "archived"
-    ]
-
-    selected_status = st.selectbox(
-        "Status",
-        status_options,
-        index=status_options.index(
-            current_status
-        )
-    )
-
-    if st.button(
-        "💾 Save Status"
-    ):
-
-        update_product_status(
-        selected_product.get("id"),
-        selected_status
-    )
-
-        st.success(
-        "Status updated!"
-    )
-
-        st.rerun()
-
         st.write(
-        f"Downloads: {selected_product.get('downloads', 0)}"
-    )
+            f"Downloads: {selected_product.get('downloads', 0)}"
+        )
 
+        # -----------------------------------
+        # STATUS
+        # -----------------------------------
+
+        current_status = (
+            selected_product.get(
+                "status",
+                "draft"
+            )
+        )
+
+        status_options = [
+            "draft",
+            "ready",
+            "published",
+            "archived"
+        ]
+
+        selected_status = st.selectbox(
+            "Status",
+            status_options,
+            index=status_options.index(
+                current_status
+            )
+        )
+
+        if st.button(
+            "💾 Save Status",
+            key="save_status_button"
+        ):
+
+            update_product_status(
+                selected_product.get("id"),
+                selected_status
+            )
+
+            st.success(
+                "Status updated!"
+            )
+
+            st.rerun()
+
+        # -----------------------------------
         # IMAGE PROMPT
+        # -----------------------------------
 
         st.markdown(
             "### Image Prompt"
@@ -722,7 +954,9 @@ if filtered_products:
             )
         )
 
+        # -----------------------------------
         # JSON DATA
+        # -----------------------------------
 
         st.markdown(
             "### JSON Data"
@@ -732,27 +966,20 @@ if filtered_products:
             selected_product
         )
 
+        # -----------------------------------
         # EXPORT PACKAGE
+        # -----------------------------------
 
         if st.button(
-    "📦 Export Product Package"
-):
+            "📦 Export Product Package",
+            key="export_package_button"
+        ):
 
             increment_downloads(
-            selected_product.get("id")
-            )
-
-            zip_path = (
-                export_product_package(
-                    selected_product
+                selected_product.get(
+                    "id"
                 )
             )
-
-            st.success(
-            f"Package exported to {zip_path}"
-            )
-
-            st.rerun()
 
             zip_path = (
                 export_product_package(
@@ -764,7 +991,11 @@ if filtered_products:
                 f"Package exported to {zip_path}"
             )
 
+            st.rerun()
+
+        # -----------------------------------
         # DOWNLOAD JSON
+        # -----------------------------------
 
         product_json = json.dumps(
             selected_product,
@@ -783,3 +1014,4 @@ else:
     st.info(
         "No products available to display."
     )
+

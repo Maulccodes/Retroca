@@ -8,8 +8,13 @@ from agents.prompt_agent import prompt_agent
 
 trend_task = Task(
     description="""
-    Research a trending Etsy digital product niche.
-    """,
+Research trending products in the
+{niche} niche.
+
+Generate products that match
+the selected art style:
+{style}.
+""",
 
     expected_output="""
     Include:
@@ -25,9 +30,13 @@ trend_task = Task(
 
 product_task = Task(
     description="""
-    Generate an Etsy product idea
-    based on the discovered trend.
-    """,
+Research trending products in the
+{niche} niche.
+
+Generate products that match
+the selected art style:
+{style}.
+""",
 
     expected_output="""
     Include:
@@ -42,9 +51,13 @@ product_task = Task(
 
 seo_task = Task(
     description="""
-    Generate Etsy SEO keywords
-    and tags.
-    """,
+Research trending products in the
+{niche} niche.
+
+Generate products that match
+the selected art style:
+{style}.
+""",
 
     expected_output="""
     SEO tags and keywords.
@@ -56,8 +69,13 @@ seo_task = Task(
 
 prompt_task = Task(
     description="""
-    Generate a cinematic AI image prompt.
-    """,
+Research trending products in the
+{niche} niche.
+
+Generate products that match
+the selected art style:
+{style}.
+""",
 
     expected_output="""
     Detailed AI image prompt.

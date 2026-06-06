@@ -32,7 +32,11 @@ from generators.image_generator import generate_image
 from generators.json_exporter import export_product_json
 
 
-def generate_products(quantity=1):
+def generate_products(
+    quantity=1,
+    niche="Retro Gaming",
+    style="Pixel Art"
+):
 
     crew = Crew(
         agents=[
@@ -59,7 +63,34 @@ def generate_products(quantity=1):
         print(f"Generating Product {i+1}")
 
         # Run AI Crew
-        result = crew.kickoff()
+        result = crew.kickoff(
+    inputs={
+        "niche": niche,
+        "style": style
+    }
+)
+
+    # Convert CrewAI output to text
+    result_text = str(result)
+
+    # Default title fallback
+    title = f"Retro Product {i+1}"
+
+    # Try to extract AI-generated title
+    if "Title:" in result_text:
+
+        try:
+
+            title = (
+            result_text
+            .split("Title:")[1]
+            .split("\n")[0]
+            .strip()
+        )
+
+        except Exception:
+
+            pass
 
         # Create folder
         folder_path = create_product_folder(
@@ -75,11 +106,12 @@ def generate_products(quantity=1):
 
         # Image prompt
         image_prompt = f"""
-        Retro gaming product,
-        pixel art,
-        neon aesthetic,
-        product variation {i+1}
-        """
+    {niche},
+    {style},
+    high quality product mockup,
+    professional marketplace artwork,
+    product variation {i+1}
+    """
 
         # Image path
         image_path = f"{folder_path}/product_image.png"
@@ -97,7 +129,7 @@ def generate_products(quantity=1):
 
     "product_number": i + 1,
 
-    "title": f"Retro Product {i+1}_{uuid.uuid4().hex[:6]}",
+    "title": title,
 
     "description": str(result),
 
