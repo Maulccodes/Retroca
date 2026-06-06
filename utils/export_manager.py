@@ -151,4 +151,9 @@ def export_product_package(product):
                     arcname=file
                 )
 
+                product["downloads"] = (
+                product.get(
+                "downloads",0) + 1
+                )
+
     return zip_path

@@ -1,3 +1,6 @@
+import uuid
+from datetime import datetime
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -89,17 +92,36 @@ def generate_products(quantity=1):
 
         # Product data
         product_data = {
-            "product_number": i + 1,
-            "title": f"Retro Product {i+1}",
-            "description": str(result),
-            "image_prompt": image_prompt,
-            "image_path": image_path,
-            "tags": [
-                "retro",
-                "gaming",
-                "pixel art"
-            ]
-        }
+
+    "id": str(uuid.uuid4()),
+
+    "product_number": i + 1,
+
+    "title": f"Retro Product {i+1}_{uuid.uuid4().hex[:6]}",
+
+    "description": str(result),
+
+    "image_prompt": image_prompt,
+
+    "image_path": image_path,
+
+    "tags": [
+        "retro",
+        "gaming",
+        "pixel art"
+    ],
+
+    "created_at": (
+        datetime.now()
+        .strftime("%Y-%m-%d %H:%M:%S")
+    ),
+
+    "status": "draft",
+
+    "favorite": False,
+
+    "downloads": 0
+}
 
         # Export JSON
         export_product_json(

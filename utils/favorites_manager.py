@@ -33,7 +33,7 @@ def add_favorite(product):
     title = product.get("title")
 
     exists = any(
-        fav.get("title") == title
+        fav.get("id") == title
         for fav in favorites
     )
 
@@ -51,7 +51,7 @@ def remove_favorite(title):
     favorites = [
         fav
         for fav in favorites
-        if fav.get("title") != title
+        if fav.get("id") != title
     ]
 
     save_favorites(favorites)
