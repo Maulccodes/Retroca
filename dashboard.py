@@ -2,6 +2,10 @@ import streamlit as st
 import json
 import os
 
+from utils.export_manager import (
+    export_product_package
+)
+
 from engine import generate_products
 
 from utils.favorites_manager import (
@@ -454,6 +458,20 @@ if filtered_products:
         st.json(
             selected_product
         )
+
+        if st.button(
+    "📦 Export Product Package"
+):
+
+            zip_path = (
+            export_product_package(
+            selected_product
+        )
+    )
+
+            st.success(
+            f"Package exported to {zip_path}"
+    )    
 
         product_json = json.dumps(
             selected_product,
