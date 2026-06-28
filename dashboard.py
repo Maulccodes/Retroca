@@ -786,6 +786,51 @@ if filtered_products:
         st.subheader(title)
 
         # -----------------------------------
+        # QUALITY SCORE
+        # -----------------------------------
+
+        quality_score = selected_product.get(
+            "quality_score",
+            0
+        )
+
+        st.metric(
+            "⭐ Quality Score",
+            f"{quality_score}%"
+        )
+
+        st.progress(
+            quality_score / 100
+        )
+
+        quality = selected_product.get(
+        "quality",
+            {}
+        )
+
+        st.markdown("### 📊 Quality Breakdown")
+
+        st.write(
+            f"**Title:** {quality.get('title', 0)}"
+        )
+
+        st.write(
+            f"**Description:** {quality.get('description', 0)}"
+        )
+
+        st.write(
+            f"**Image Prompt:** {quality.get('image_prompt', 0)}"
+        )
+
+        st.write(
+            f"**SEO:** {quality.get('seo', 0)}"
+        )
+
+        st.write(
+            f"**Keywords:** {quality.get('keywords', 0)}"
+        )
+
+        # -----------------------------------
         # FAVORITES
         # -----------------------------------
 

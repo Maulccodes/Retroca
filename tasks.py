@@ -4,6 +4,7 @@ from agents.trend_agent import trend_agent
 from agents.product_agent import product_agent
 from agents.seo_agent import seo_agent
 from agents.prompt_agent import prompt_agent
+from agents.critic_agent import critic_agent
 
 
 # -----------------------------------
@@ -43,6 +44,8 @@ product_task = Task(
     description="""
 Using the trend identified by the Trend Agent,
 create EXACTLY ONE marketplace-ready product.
+
+{trend}
 
 Niche:
 {niche}
@@ -97,23 +100,33 @@ Keywords:
 seo_task = Task(
 
     description="""
-Generate SEO metadata for the product created by the Product Agent.
+    You are improving an existing marketplace product.
 
-Return ONLY:
+    Product:
 
-SEO Tags:
-Keywords:
-Short Marketplace Description:
-""",
+    {product}
 
-    expected_output="""
-SEO Tags:
-Keywords:
-Short Marketplace Description:
-""",
+    Generate ONLY the following.
 
-    agent=seo_agent
-)
+    SEO Tags:
+    tag1, tag2, tag3, tag4, tag5
+
+    Keywords:
+    keyword1, keyword2, keyword3, keyword4, keyword5
+
+    Do NOT rewrite the title.
+    Do NOT rewrite the description.
+    Do NOT generate an image prompt.
+    Return ONLY the requested sections.
+    """,
+
+        expected_output="""
+    SEO Tags:
+    Keywords:
+    """,
+
+        agent=seo_agent
+    )
 
 
 # -----------------------------------
@@ -123,7 +136,13 @@ Short Marketplace Description:
 prompt_task = Task(
 
         description="""
-    Create ONE AI image prompt for the product created by the Product Agent.
+    You are creating a marketplace image prompt for this product.
+
+    Product:
+
+    {product}
+
+    Generate ONE professional AI image prompt.
 
     Return ONLY:
 
@@ -134,5 +153,42 @@ prompt_task = Task(
     Image Prompt:
     """,
 
-    agent=prompt_agent
+        agent=prompt_agent
+    )
+
+critic_task = Task(
+
+    description="""
+Review ONLY the following marketplace product.
+
+Product:
+
+{product}
+
+Evaluate:
+
+- Title
+- Description
+- Image Prompt
+- SEO Tags
+- Keywords
+
+Return ONLY:
+
+Overall Score:
+Strengths:
+Weaknesses:
+Suggestions:
+Marketplace Ready:
+""",
+
+    expected_output="""
+Overall Score:
+Strengths:
+Weaknesses:
+Suggestions:
+Marketplace Ready:
+""",
+
+    agent=critic_agent
 )

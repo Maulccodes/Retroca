@@ -2,25 +2,18 @@ import uuid
 from datetime import datetime
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from crewai import Crew
-
 # -----------------------------------
-# AGENTS
+# SERVICES
 # -----------------------------------
 
-from agents.trend_agent import trend_agent
-from agents.product_agent import product_agent
-
-# -----------------------------------
-# TASKS
-# -----------------------------------
-
-from tasks import (
-    trend_task,
-    product_task
-)
+from services.trend_service import generate_trend
+from services.product_service import generate_product
+from services.seo_service import generate_seo
+from services.prompt_service import generate_prompt
+from services.critic_service import review_product
 
 # -----------------------------------
 # UTILITIES
@@ -32,7 +25,7 @@ from utils.file_manager import (
 )
 
 from utils.database_manager import add_product
-from utils.parser import parse_ai_output
+from utils.quality_scorer import score_product
 
 from generators.image_generator import generate_image
 from generators.json_exporter import export_product_json
@@ -48,57 +41,94 @@ def generate_products(
     style="Pixel Art"
 ):
 
-    crew = Crew(
-
-        agents=[
-            trend_agent,
-            product_agent
-        ],
-
-        tasks=[
-            trend_task,
-            product_task
-        ],
-
-        verbose=True
-    )
-
     generated_products = []
 
     for i in range(quantity):
 
-        print(f"\nGenerating Product {i+1}...\n")
+        print(f"\nGenerating Product {i + 1}\n")
 
-        # -----------------------------------
-        # RUN CREW
-        # -----------------------------------
+        # ==========================================
+        # TREND
+        # ==========================================
 
-        result = crew.kickoff(
-            inputs={
-                "niche": niche,
-                "style": style
-            }
+        print("\n========== TREND ==========\n")
+
+        trend = generate_trend(niche)
+
+        print(trend["data"])
+
+        # ==========================================
+        # PRODUCT
+        # ==========================================
+
+        print("\n========== PRODUCT ==========\n")
+
+        product = generate_product(
+
+            niche=niche,
+            style=style,
+            trend=trend["data"]
+
         )
 
-        result_text = str(result)
+        parsed = product["data"]
+        result_text = product["raw_output"]
 
-        # -----------------------------------
-        # PARSE AI OUTPUT
-        # -----------------------------------
+        print(parsed)
 
-        parsed = parse_ai_output(result_text)
+        # ==========================================
+        # SEO
+        # ==========================================
 
-        # -----------------------------------
-        # CREATE PRODUCT FOLDER
-        # -----------------------------------
+        print("\n========== SEO ==========\n")
+
+        seo = generate_seo(parsed)
+
+        parsed.update(
+            seo["data"]
+        )
+
+        print(seo["data"])
+
+        # ==========================================
+        # IMAGE PROMPT
+        # ==========================================
+
+        print("\n========== PROMPT ==========\n")
+
+        prompt = generate_prompt(parsed)
+
+        parsed.update(
+            prompt["data"]
+        )
+
+        print(prompt["data"])
+
+        # ==========================================
+        # AI REVIEW
+        # ==========================================
+
+        print("\n========== REVIEW ==========\n")
+
+        review = review_product(parsed)
+
+        parsed.update(
+            review["data"]
+        )
+
+        print(review["data"])
+
+        # ==========================================
+        # PRODUCT FOLDER
+        # ==========================================
 
         folder_path = create_product_folder(
             f"retro_product_{i+1}"
         )
 
-        # -----------------------------------
-        # SAVE RAW AI OUTPUT
-        # -----------------------------------
+        # ==========================================
+        # SAVE RAW OUTPUT
+        # ==========================================
 
         save_text_file(
             folder_path,
@@ -106,69 +136,39 @@ def generate_products(
             result_text
         )
 
-        # -----------------------------------
-        # IMAGE PROMPT
-        # -----------------------------------
+        # ==========================================
+        # IMAGE
+        # ==========================================
 
-        image_prompt = (
-            parsed.get("image_prompt")
-            or
-            f"""
-Create an ORIGINAL retro-inspired product image.
-
-Product:
-{parsed.get("title", "Retro Product")}
-
-Style:
-{style}
-
-Niche:
-{niche}
-
-Professional marketplace artwork.
-White background.
-No copyrighted characters.
-No logos.
-No brands.
-"""
+        image_prompt = parsed.get(
+            "image_prompt",
+            ""
         )
 
         image_path = (
             f"{folder_path}/product_image.png"
         )
 
-        # -----------------------------------
-        # GENERATE IMAGE
-        # -----------------------------------
-
         try:
 
-            print("\n==============================")
-            print("IMAGE PROMPT")
-            print("==============================\n")
-
-            print(image_prompt)
+            print("\n========== IMAGE ==========\n")
 
             generate_image(
                 image_prompt,
                 image_path
             )
 
-            print("\n✓ Image generated successfully.\n")
+            print("✓ Image generated.")
 
         except Exception as e:
-
-            print("\n==============================")
-            print("IMAGE GENERATION FAILED")
-            print("==============================\n")
 
             print(e)
 
             image_path = ""
 
-        # -----------------------------------
+        # ==========================================
         # PRODUCT DATA
-        # -----------------------------------
+        # ==========================================
 
         product_data = {
 
@@ -176,36 +176,39 @@ No brands.
 
             "product_number": i + 1,
 
-            "title": (
-                parsed.get("title")
-                or
+            "title": parsed.get(
+                "title",
                 f"Retro Product {i+1}"
             ),
 
-            "description": (
-                parsed.get("description")
-                or
-                result_text
+            "description": parsed.get(
+                "description",
+                ""
             ),
 
-            "audience": (
-                parsed.get("audience")
-                or
-                "General Audience"
+            "audience": parsed.get(
+                "audience",
+                ""
             ),
 
-            "image_prompt": image_prompt,
+            "image_prompt": parsed.get(
+                "image_prompt",
+                ""
+            ),
 
-            "seo_tags": (
-                parsed.get("seo_tags")
-                or
+            "seo_tags": parsed.get(
+                "seo_tags",
                 []
             ),
 
-            "keywords": (
-                parsed.get("keywords")
-                or
+            "keywords": parsed.get(
+                "keywords",
                 []
+            ),
+
+            "review": parsed.get(
+                "review",
+                ""
             ),
 
             "image_path": image_path,
@@ -224,27 +227,39 @@ No brands.
             "favorite": False,
 
             "downloads": 0
+
         }
 
-        # -----------------------------------
-        # EXPORT JSON
-        # -----------------------------------
+        # ==========================================
+        # QUALITY SCORE
+        # ==========================================
+
+        quality = score_product(
+            product_data
+        )
+
+        product_data["quality"] = quality
+        product_data["quality_score"] = quality["overall"]
+
+        # ==========================================
+        # EXPORT
+        # ==========================================
 
         export_product_json(
             folder_path,
             product_data
         )
 
-        # -----------------------------------
-        # SAVE DATABASE
-        # -----------------------------------
+        add_product(
+            product_data
+        )
 
-        add_product(product_data)
-
-        generated_products.append(product_data)
+        generated_products.append(
+            product_data
+        )
 
         print(
-            f"✓ Generated: {product_data['title']}"
+            f"\n✓ Generated: {product_data['title']}"
         )
 
     return generated_products
