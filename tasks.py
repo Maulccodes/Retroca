@@ -6,79 +6,132 @@ from agents.seo_agent import seo_agent
 from agents.prompt_agent import prompt_agent
 
 
-trend_task = Task(
-    description="""
-Research trending products in the
-{niche} niche.
+# -----------------------------------
+# TREND RESEARCH
+# -----------------------------------
 
-Generate products that match
-the selected art style:
-{style}.
+trend_task = Task(
+
+    description="""
+Research ONE trending opportunity in the {niche} niche.
+
+Return only:
+
+Trend
+Audience
+Season
+Reason this trend is popular
 """,
 
     expected_output="""
-    Include:
-    - niche
-    - audience
-    - style
-    - seasonal angle
-    """,
+Trend:
+Audience:
+Season:
+Reason:
+""",
 
     agent=trend_agent
 )
 
 
-product_task = Task(
-    description="""
-Research trending products in the
-{niche} niche.
+# -----------------------------------
+# PRODUCT CREATION
+# -----------------------------------
 
-Generate products that match
-the selected art style:
-{style}.
+product_task = Task(
+
+    description="""
+Using the trend identified by the Trend Agent,
+create EXACTLY ONE marketplace-ready product.
+
+Niche:
+{niche}
+
+Art Style:
+{style}
+
+Your response MUST contain every section below.
+
+Return ONLY this format.
+
+Title:
+<one title>
+
+Description:
+<150-300 words>
+
+Audience:
+<ideal customer>
+
+Image Prompt:
+<one detailed AI image prompt>
+
+SEO Tags:
+tag1, tag2, tag3, tag4, tag5
+
+Keywords:
+keyword1, keyword2, keyword3, keyword4, keyword5
+
+Do NOT generate multiple products.
+Do NOT generate alternatives.
+Do NOT use Markdown.
 """,
 
     expected_output="""
-    Include:
-    - title
-    - description
-    - audience
-    """,
+Title:
+Description:
+Audience:
+Image Prompt:
+SEO Tags:
+Keywords:
+""",
 
     agent=product_agent
 )
 
 
-seo_task = Task(
-    description="""
-Research trending products in the
-{niche} niche.
+# -----------------------------------
+# SEO
+# -----------------------------------
 
-Generate products that match
-the selected art style:
-{style}.
+seo_task = Task(
+
+    description="""
+Generate SEO metadata for the product created by the Product Agent.
+
+Return ONLY:
+
+SEO Tags:
+Keywords:
+Short Marketplace Description:
 """,
 
     expected_output="""
-    SEO tags and keywords.
-    """,
+SEO Tags:
+Keywords:
+Short Marketplace Description:
+""",
 
     agent=seo_agent
 )
 
 
+# -----------------------------------
+# IMAGE PROMPT
+# -----------------------------------
+
 prompt_task = Task(
-    description="""
-Research trending products in the
-{niche} niche.
 
-Generate products that match
-the selected art style:
-{style}.
-""",
+        description="""
+    Create ONE AI image prompt for the product created by the Product Agent.
 
-    expected_output="""
-    Detailed AI image prompt.
+    Return ONLY:
+
+    Image Prompt:
+    """,
+
+        expected_output="""
+    Image Prompt:
     """,
 
     agent=prompt_agent

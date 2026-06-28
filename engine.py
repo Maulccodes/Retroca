@@ -6,31 +6,41 @@ load_dotenv()
 
 from crewai import Crew
 
-# Agents
+# -----------------------------------
+# AGENTS
+# -----------------------------------
+
 from agents.trend_agent import trend_agent
 from agents.product_agent import product_agent
-from agents.seo_agent import seo_agent
-from agents.prompt_agent import prompt_agent
 
-# Tasks
+# -----------------------------------
+# TASKS
+# -----------------------------------
+
 from tasks import (
     trend_task,
-    product_task,
-    seo_task,
-    prompt_task
+    product_task
 )
 
-# Utilities
+# -----------------------------------
+# UTILITIES
+# -----------------------------------
+
 from utils.file_manager import (
     create_product_folder,
     save_text_file
 )
 
 from utils.database_manager import add_product
+from utils.parser import parse_ai_output
 
 from generators.image_generator import generate_image
 from generators.json_exporter import export_product_json
 
+
+# -----------------------------------
+# PRODUCT GENERATION
+# -----------------------------------
 
 def generate_products(
     quantity=1,
@@ -39,18 +49,15 @@ def generate_products(
 ):
 
     crew = Crew(
+
         agents=[
             trend_agent,
-            product_agent,
-            seo_agent,
-            prompt_agent
+            product_agent
         ],
 
         tasks=[
             trend_task,
-            product_task,
-            seo_task,
-            prompt_task
+            product_task
         ],
 
         verbose=True
@@ -60,110 +67,184 @@ def generate_products(
 
     for i in range(quantity):
 
-        print(f"Generating Product {i+1}")
+        print(f"\nGenerating Product {i+1}...\n")
 
-        # Run AI Crew
+        # -----------------------------------
+        # RUN CREW
+        # -----------------------------------
+
         result = crew.kickoff(
-    inputs={
-        "niche": niche,
-        "style": style
-    }
-)
-
-    # Convert CrewAI output to text
-    result_text = str(result)
-
-    # Default title fallback
-    title = f"Retro Product {i+1}"
-
-    # Try to extract AI-generated title
-    if "Title:" in result_text:
-
-        try:
-
-            title = (
-            result_text
-            .split("Title:")[1]
-            .split("\n")[0]
-            .strip()
+            inputs={
+                "niche": niche,
+                "style": style
+            }
         )
 
-        except Exception:
+        result_text = str(result)
 
-            pass
+        # -----------------------------------
+        # PARSE AI OUTPUT
+        # -----------------------------------
 
-        # Create folder
+        parsed = parse_ai_output(result_text)
+
+        # -----------------------------------
+        # CREATE PRODUCT FOLDER
+        # -----------------------------------
+
         folder_path = create_product_folder(
             f"retro_product_{i+1}"
         )
 
-        # Save output
+        # -----------------------------------
+        # SAVE RAW AI OUTPUT
+        # -----------------------------------
+
         save_text_file(
             folder_path,
             "output.txt",
-            str(result)
+            result_text
         )
 
-        # Image prompt
-        image_prompt = f"""
-    {niche},
-    {style},
-    high quality product mockup,
-    professional marketplace artwork,
-    product variation {i+1}
-    """
+        # -----------------------------------
+        # IMAGE PROMPT
+        # -----------------------------------
 
-        # Image path
-        image_path = f"{folder_path}/product_image.png"
+        image_prompt = (
+            parsed.get("image_prompt")
+            or
+            f"""
+Create an ORIGINAL retro-inspired product image.
 
-        # Generate image
-        generate_image(
-            image_prompt,
-            image_path
+Product:
+{parsed.get("title", "Retro Product")}
+
+Style:
+{style}
+
+Niche:
+{niche}
+
+Professional marketplace artwork.
+White background.
+No copyrighted characters.
+No logos.
+No brands.
+"""
         )
 
-        # Product data
+        image_path = (
+            f"{folder_path}/product_image.png"
+        )
+
+        # -----------------------------------
+        # GENERATE IMAGE
+        # -----------------------------------
+
+        try:
+
+            print("\n==============================")
+            print("IMAGE PROMPT")
+            print("==============================\n")
+
+            print(image_prompt)
+
+            generate_image(
+                image_prompt,
+                image_path
+            )
+
+            print("\n✓ Image generated successfully.\n")
+
+        except Exception as e:
+
+            print("\n==============================")
+            print("IMAGE GENERATION FAILED")
+            print("==============================\n")
+
+            print(e)
+
+            image_path = ""
+
+        # -----------------------------------
+        # PRODUCT DATA
+        # -----------------------------------
+
         product_data = {
 
-    "id": str(uuid.uuid4()),
+            "id": str(uuid.uuid4()),
 
-    "product_number": i + 1,
+            "product_number": i + 1,
 
-    "title": title,
+            "title": (
+                parsed.get("title")
+                or
+                f"Retro Product {i+1}"
+            ),
 
-    "description": str(result),
+            "description": (
+                parsed.get("description")
+                or
+                result_text
+            ),
 
-    "image_prompt": image_prompt,
+            "audience": (
+                parsed.get("audience")
+                or
+                "General Audience"
+            ),
 
-    "image_path": image_path,
+            "image_prompt": image_prompt,
 
-    "tags": [
-        "retro",
-        "gaming",
-        "pixel art"
-    ],
+            "seo_tags": (
+                parsed.get("seo_tags")
+                or
+                []
+            ),
 
-    "created_at": (
-        datetime.now()
-        .strftime("%Y-%m-%d %H:%M:%S")
-    ),
+            "keywords": (
+                parsed.get("keywords")
+                or
+                []
+            ),
 
-    "status": "draft",
+            "image_path": image_path,
 
-    "favorite": False,
+            "tags": [
+                niche.lower(),
+                style.lower()
+            ],
 
-    "downloads": 0
-}
+            "created_at": datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            ),
 
-        # Export JSON
+            "status": "draft",
+
+            "favorite": False,
+
+            "downloads": 0
+        }
+
+        # -----------------------------------
+        # EXPORT JSON
+        # -----------------------------------
+
         export_product_json(
             folder_path,
             product_data
         )
 
-        # Save to database
+        # -----------------------------------
+        # SAVE DATABASE
+        # -----------------------------------
+
         add_product(product_data)
 
         generated_products.append(product_data)
+
+        print(
+            f"✓ Generated: {product_data['title']}"
+        )
 
     return generated_products
