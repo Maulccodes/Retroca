@@ -6,7 +6,8 @@ from tasks import prompt_task
 
 def generate_prompt(product):
     """
-    Generates an AI image prompt for a product.
+    Generates an improved image prompt
+    for an existing Product.
     """
 
     crew = Crew(
@@ -26,23 +27,60 @@ def generate_prompt(product):
     result = crew.kickoff(
 
         inputs={
-            "product": product
+
+            "product": f"""
+Title:
+{product.title}
+
+Description:
+{product.description}
+
+Audience:
+{product.audience}
+
+SEO Tags:
+{", ".join(product.seo_tags)}
+
+Keywords:
+{", ".join(product.keywords)}
+"""
+
         }
 
     )
 
-    result_text = str(result).strip()
+    result_text = str(result)
 
-    # Remove the label if the AI includes it
-    if result_text.lower().startswith("image prompt:"):
-        result_text = result_text.split(":", 1)[1].strip()
+    image_prompt = ""
 
-    return {
+    collecting = False
 
-        "data": {
-            "image_prompt": result_text
-        },
+    for line in result_text.splitlines():
 
-        "raw_output": str(result)
+        line = line.strip()
 
-    }
+        if not line:
+            continue
+
+        if line.lower().startswith("image prompt"):
+
+            collecting = True
+
+            line = line.replace(
+                "Image Prompt:",
+                ""
+            ).strip()
+
+            if line:
+
+                image_prompt += line + " "
+
+            continue
+
+        if collecting:
+
+            image_prompt += line + " "
+
+    product.image_prompt = image_prompt.strip()
+
+    return product

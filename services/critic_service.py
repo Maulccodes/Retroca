@@ -6,8 +6,9 @@ from tasks import critic_task
 
 def review_product(product):
     """
-    Reviews a generated product and returns
-    only the review.
+    Reviews an existing Product object.
+    Updates product.review and returns
+    the same Product.
     """
 
     crew = Crew(
@@ -27,21 +28,31 @@ def review_product(product):
     result = crew.kickoff(
 
         inputs={
-            "product": product
+
+            "product": f"""
+Title:
+{product.title}
+
+Description:
+{product.description}
+
+Audience:
+{product.audience}
+
+Image Prompt:
+{product.image_prompt}
+
+SEO Tags:
+{", ".join(product.seo_tags)}
+
+Keywords:
+{", ".join(product.keywords)}
+"""
+
         }
 
     )
 
-    result_text = str(result).strip()
+    product.review = str(result)
 
-    return {
-
-        "data": {
-
-            "review": result_text
-
-        },
-
-        "raw_output": result_text
-
-    }
+    return product

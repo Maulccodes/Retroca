@@ -3,10 +3,13 @@ from crewai import Crew
 from agents.seo_agent import seo_agent
 from tasks import seo_task
 
+from utils.parser import parse_ai_output
+
 
 def generate_seo(product):
     """
-    Generates SEO tags and keywords for an existing product.
+    Generates SEO metadata for a Product object.
+    Updates the Product and returns it.
     """
 
     crew = Crew(
@@ -26,65 +29,37 @@ def generate_seo(product):
     result = crew.kickoff(
 
         inputs={
-            "product": product
+
+            "product": f"""
+Title:
+{product.title}
+
+Description:
+{product.description}
+
+Audience:
+{product.audience}
+
+Image Prompt:
+{product.image_prompt}
+"""
+
         }
 
     )
 
     result_text = str(result)
 
-    seo_tags = []
-    keywords = []
+    parsed = parse_ai_output(result_text)
 
-    current_section = None
+    product.seo_tags = parsed.get(
+        "seo_tags",
+        []
+    )
 
-    for line in result_text.splitlines():
+    product.keywords = parsed.get(
+        "keywords",
+        []
+    )
 
-        line = line.strip()
-
-        if not line:
-            continue
-
-        lower = line.lower()
-
-        if lower.startswith("seo tags"):
-            current_section = "seo"
-            continue
-
-        if lower.startswith("keywords"):
-            current_section = "keywords"
-            continue
-
-        if current_section == "seo":
-
-            seo_tags.extend(
-                [
-                    tag.strip()
-                    for tag in line.split(",")
-                    if tag.strip()
-                ]
-            )
-
-        elif current_section == "keywords":
-
-            keywords.extend(
-                [
-                    keyword.strip()
-                    for keyword in line.split(",")
-                    if keyword.strip()
-                ]
-            )
-
-    return {
-
-        "data": {
-
-            "seo_tags": seo_tags,
-
-            "keywords": keywords
-
-        },
-
-        "raw_output": result_text
-
-    }
+    return product
