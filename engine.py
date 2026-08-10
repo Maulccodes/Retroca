@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 # -----------------------------------
 # SERVICES
 # -----------------------------------
@@ -13,7 +14,9 @@ from services.trend_service import generate_trend
 from services.product_service import generate_product
 from services.seo_service import generate_seo
 from services.prompt_service import generate_prompt
-from services.critic_service import review_product
+
+from utils.improvement_loop import improve_until_ready
+
 
 # -----------------------------------
 # UTILITIES
@@ -32,6 +35,105 @@ from generators.json_exporter import export_product_json
 
 
 # -----------------------------------
+# PRODUCT MODEL
+# -----------------------------------
+
+from models.product import Product
+
+
+# -----------------------------------
+# PREPARE PRODUCT
+# -----------------------------------
+
+def build_product(
+    product,
+    niche,
+    style
+):
+    """
+    Prepare the Product model for the
+    generation pipeline.
+    """
+
+    if not isinstance(product, Product):
+        raise TypeError(
+            "build_product() expected a Product object, "
+            f"received {type(product).__name__}"
+        )
+
+    if not product.id:
+        product.id = str(uuid.uuid4())
+
+    if not product.tags:
+        product.tags = [
+            niche.lower(),
+            style.lower()
+        ]
+
+    if not product.created_at:
+        product.created_at = datetime.now().strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
+    if not product.status:
+        product.status = "draft"
+
+    return product
+
+
+# -----------------------------------
+# CONVERT PRODUCT TO DATABASE DATA
+# -----------------------------------
+
+def product_to_dict(
+    product,
+    product_number,
+    image_path,
+    quality
+):
+    """
+    Convert Product model into the dictionary
+    format used by the database and JSON exporter.
+    """
+
+    return {
+        "id": product.id,
+
+        "product_number": product_number,
+
+        "title": product.title,
+
+        "description": product.description,
+
+        "audience": product.audience,
+
+        "image_prompt": product.image_prompt,
+
+        "seo_tags": product.seo_tags,
+
+        "keywords": product.keywords,
+
+        "review": product.review,
+
+        "image_path": image_path,
+
+        "tags": product.tags,
+
+        "created_at": product.created_at,
+
+        "status": product.status,
+
+        "favorite": product.favorite,
+
+        "downloads": product.downloads,
+
+        "quality": quality,
+
+        "quality_score": quality["overall"]
+    }
+
+
+# -----------------------------------
 # PRODUCT GENERATION
 # -----------------------------------
 
@@ -45,90 +147,161 @@ def generate_products(
 
     for i in range(quantity):
 
-        print(f"\nGenerating Product {i + 1}\n")
+        print(
+            f"\n\n================================"
+            f"\nGENERATING PRODUCT {i + 1}"
+            f"\n================================\n"
+        )
 
-        # ==========================================
+        # ===================================
         # TREND
-        # ==========================================
+        # ===================================
 
-        print("\n========== TREND ==========\n")
+        print(
+            "\n========== TREND ==========\n"
+        )
 
-        trend = generate_trend(niche)
+        trend = generate_trend(
+            niche
+        )
 
-        print(trend["data"])
+        print(
+            trend["data"]
+        )
 
-        # ==========================================
+        # ===================================
         # PRODUCT
-        # ==========================================
+        # ===================================
 
-        print("\n========== PRODUCT ==========\n")
+        print(
+            "\n========== PRODUCT ==========\n"
+        )
 
-        product = generate_product(
-
+        product_result = generate_product(
             niche=niche,
             style=style,
             trend=trend["data"]
-
         )
 
-        parsed = product["data"]
-        result_text = product["raw_output"]
+        # -----------------------------------
+        # EXTRACT PRODUCT
+        # -----------------------------------
 
-        print(parsed)
+        if not isinstance(product_result, dict):
+            raise TypeError(
+                "generate_product() must return a "
+                "dictionary containing 'data' "
+                "and 'raw_output'."
+            )
 
-        # ==========================================
+        product = product_result.get(
+            "data"
+        )
+
+        result_text = product_result.get(
+            "raw_output",
+            ""
+        )
+
+        if not isinstance(product, Product):
+            raise TypeError(
+                "generate_product()['data'] must be "
+                f"a Product object, received "
+                f"{type(product).__name__}"
+            )
+
+        print(
+            product
+        )
+
+        # ===================================
+        # PREPARE PRODUCT
+        # ===================================
+
+        product = build_product(
+            product=product,
+            niche=niche,
+            style=style
+        )
+
+        product.product_number = i + 1
+
+        # ===================================
         # SEO
-        # ==========================================
+        # ===================================
 
-        print("\n========== SEO ==========\n")
-
-        seo = generate_seo(parsed)
-
-        parsed.update(
-            seo["data"]
+        print(
+            "\n========== SEO ==========\n"
         )
 
-        print(seo["data"])
+        # generate_seo() returns the updated
+        # Product object directly.
 
-        # ==========================================
+        product = generate_seo(
+            product
+        )
+
+        print(
+            "\nSEO Tags:"
+        )
+
+        print(
+            product.seo_tags
+        )
+
+        print(
+            "\nKeywords:"
+        )
+
+        print(
+            product.keywords
+        )
+
+        # ===================================
         # IMAGE PROMPT
-        # ==========================================
+        # ===================================
 
-        print("\n========== PROMPT ==========\n")
-
-        prompt = generate_prompt(parsed)
-
-        parsed.update(
-            prompt["data"]
+        print(
+            "\n========== PROMPT ==========\n"
         )
 
-        print(prompt["data"])
-
-        # ==========================================
-        # AI REVIEW
-        # ==========================================
-
-        print("\n========== REVIEW ==========\n")
-
-        review = review_product(parsed)
-
-        parsed.update(
-            review["data"]
+        product = generate_prompt(
+            product
         )
 
-        print(review["data"])
+        print(
+            "\nImage Prompt:"
+        )
 
-        # ==========================================
+        print(
+            product.image_prompt
+        )
+
+        # ===================================
+        # QUALITY / IMPROVEMENT PIPELINE
+        # ===================================
+
+        print(
+            "\n========== QUALITY PIPELINE ==========\n"
+        )
+
+        product = improve_until_ready(
+            product,
+            target_score=90,
+            max_attempts=3
+        )
+
+        # ===================================
         # PRODUCT FOLDER
-        # ==========================================
+        # ===================================
 
         folder_path = create_product_folder(
-            f"retro_product_{i+1}"
+            f"retro_product_{i + 1}"
         )
 
-        # ==========================================
-        # SAVE RAW OUTPUT
-        # ==========================================
+        # ===================================
+        # SAVE RAW AI OUTPUT
+        # ===================================
 
         save_text_file(
             folder_path,
@@ -136,13 +309,36 @@ def generate_products(
             result_text
         )
 
-        # ==========================================
-        # IMAGE
-        # ==========================================
+        # ===================================
+        # FINAL IMAGE
+        # ===================================
 
-        image_prompt = parsed.get(
-            "image_prompt",
-            ""
+        print(
+            "\n========== IMAGE ==========\n"
+        )
+
+        image_prompt = (
+            product.image_prompt
+            or
+            f"""
+Create an ORIGINAL retro-inspired
+marketplace product image.
+
+Product:
+{product.title}
+
+Style:
+{style}
+
+Niche:
+{niche}
+
+Professional marketplace artwork.
+
+No copyrighted characters.
+No logos.
+No brands.
+"""
         )
 
         image_path = (
@@ -151,115 +347,105 @@ def generate_products(
 
         try:
 
-            print("\n========== IMAGE ==========\n")
+            print(
+                "\nIMAGE PROMPT:\n"
+            )
+
+            print(
+                image_prompt
+            )
 
             generate_image(
                 image_prompt,
                 image_path
             )
 
-            print("✓ Image generated.")
+            print(
+                "\n✓ Image generated successfully."
+            )
 
         except Exception as e:
 
-            print(e)
+            print(
+                "\n⚠ IMAGE GENERATION FAILED"
+            )
+
+            print(
+                e
+            )
 
             image_path = ""
 
-        # ==========================================
-        # PRODUCT DATA
-        # ==========================================
+        # ===================================
+        # FINAL QUALITY SCORE
+        # ===================================
 
-        product_data = {
+        product_for_score = {
+            "title": product.title,
 
-            "id": str(uuid.uuid4()),
+            "description": product.description,
 
-            "product_number": i + 1,
+            "image_prompt": product.image_prompt,
 
-            "title": parsed.get(
-                "title",
-                f"Retro Product {i+1}"
-            ),
+            "seo_tags": product.seo_tags,
 
-            "description": parsed.get(
-                "description",
-                ""
-            ),
-
-            "audience": parsed.get(
-                "audience",
-                ""
-            ),
-
-            "image_prompt": parsed.get(
-                "image_prompt",
-                ""
-            ),
-
-            "seo_tags": parsed.get(
-                "seo_tags",
-                []
-            ),
-
-            "keywords": parsed.get(
-                "keywords",
-                []
-            ),
-
-            "review": parsed.get(
-                "review",
-                ""
-            ),
-
-            "image_path": image_path,
-
-            "tags": [
-                niche.lower(),
-                style.lower()
-            ],
-
-            "created_at": datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),
-
-            "status": "draft",
-
-            "favorite": False,
-
-            "downloads": 0
-
+            "keywords": product.keywords
         }
 
-        # ==========================================
-        # QUALITY SCORE
-        # ==========================================
-
         quality = score_product(
-            product_data
+            product_for_score
         )
 
-        product_data["quality"] = quality
-        product_data["quality_score"] = quality["overall"]
+        product.quality = quality
 
-        # ==========================================
-        # EXPORT
-        # ==========================================
+        product.quality_score = (
+            quality["overall"]
+        )
+
+        # ===================================
+        # FINAL PRODUCT DATA
+        # ===================================
+
+        product_data = product_to_dict(
+            product=product,
+            product_number=i + 1,
+            image_path=image_path,
+            quality=quality
+        )
+
+        # ===================================
+        # EXPORT JSON
+        # ===================================
 
         export_product_json(
             folder_path,
             product_data
         )
 
+        # ===================================
+        # DATABASE
+        # ===================================
+
         add_product(
             product_data
         )
+
+        # ===================================
+        # RESULTS
+        # ===================================
 
         generated_products.append(
             product_data
         )
 
         print(
-            f"\n✓ Generated: {product_data['title']}"
+            f"\n✓ Generated: "
+            f"{product.title}"
+        )
+
+        print(
+            f"✓ Quality Score: "
+            f"{quality['overall']}%"
         )
 
     return generated_products

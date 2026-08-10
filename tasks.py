@@ -5,6 +5,7 @@ from agents.product_agent import product_agent
 from agents.seo_agent import seo_agent
 from agents.prompt_agent import prompt_agent
 from agents.critic_agent import critic_agent
+from agents.improvement_agent import improvement_agent
 
 
 # -----------------------------------
@@ -18,10 +19,10 @@ Research ONE trending opportunity in the {niche} niche.
 
 Return only:
 
-Trend
-Audience
-Season
-Reason this trend is popular
+Trend:
+Audience:
+Season:
+Reason:
 """,
 
     expected_output="""
@@ -32,6 +33,7 @@ Reason:
 """,
 
     agent=trend_agent
+
 )
 
 
@@ -45,6 +47,7 @@ product_task = Task(
 Using the trend identified by the Trend Agent,
 create EXACTLY ONE marketplace-ready product.
 
+Trend:
 {trend}
 
 Niche:
@@ -90,6 +93,7 @@ Keywords:
 """,
 
     agent=product_agent
+
 )
 
 
@@ -100,33 +104,37 @@ Keywords:
 seo_task = Task(
 
     description="""
-    You are improving an existing marketplace product.
+You are improving the SEO metadata for an
+existing marketplace product.
 
-    Product:
+Product:
 
-    {product}
+{product}
 
-    Generate ONLY the following.
+Generate ONLY:
 
-    SEO Tags:
-    tag1, tag2, tag3, tag4, tag5
+SEO Tags:
+tag1, tag2, tag3, tag4, tag5
 
-    Keywords:
-    keyword1, keyword2, keyword3, keyword4, keyword5
+Keywords:
+keyword1, keyword2, keyword3, keyword4, keyword5
 
-    Do NOT rewrite the title.
-    Do NOT rewrite the description.
-    Do NOT generate an image prompt.
-    Return ONLY the requested sections.
-    """,
+Do NOT rewrite the title.
+Do NOT rewrite the description.
+Do NOT generate an image prompt.
+Do NOT provide explanations.
 
-        expected_output="""
-    SEO Tags:
-    Keywords:
-    """,
+Return ONLY the requested sections.
+""",
 
-        agent=seo_agent
-    )
+    expected_output="""
+SEO Tags:
+Keywords:
+""",
+
+    agent=seo_agent
+
+)
 
 
 # -----------------------------------
@@ -135,26 +143,43 @@ seo_task = Task(
 
 prompt_task = Task(
 
-        description="""
-    You are creating a marketplace image prompt for this product.
+    description="""
+You are creating a marketplace image prompt
+for an existing product.
 
-    Product:
+Product:
 
-    {product}
+{product}
 
-    Generate ONE professional AI image prompt.
+Generate ONE professional AI image prompt.
 
-    Return ONLY:
+The image prompt must:
 
-    Image Prompt:
-    """,
+- Match the product
+- Match the niche
+- Match the intended audience
+- Preserve the product concept
+- Be suitable for marketplace artwork
+- Avoid copyrighted characters
+- Avoid logos and brands
 
-        expected_output="""
-    Image Prompt:
-    """,
+Return ONLY:
 
-        agent=prompt_agent
-    )
+Image Prompt:
+""",
+
+    expected_output="""
+Image Prompt:
+""",
+
+    agent=prompt_agent
+
+)
+
+
+# -----------------------------------
+# PRODUCT CRITIC
+# -----------------------------------
 
 critic_task = Task(
 
@@ -172,6 +197,16 @@ Evaluate:
 - Image Prompt
 - SEO Tags
 - Keywords
+
+Consider:
+
+- Marketplace quality
+- Buyer appeal
+- Clarity
+- SEO
+- Originality
+- Product consistency
+- Conversion potential
 
 Return ONLY:
 
@@ -191,4 +226,104 @@ Marketplace Ready:
 """,
 
     agent=critic_agent
+
+)
+
+
+# -----------------------------------
+# PRODUCT IMPROVEMENT
+# -----------------------------------
+
+improvement_task = Task(
+
+    description="""
+Improve the existing marketplace product using
+the Critic Agent's feedback.
+
+IMPORTANT:
+
+Preserve the original:
+
+- Product concept
+- Niche
+- Audience
+- Overall creative direction
+
+Only make improvements that address the critic's
+identified weaknesses.
+
+Do NOT create an unrelated product.
+
+Existing Product:
+
+Title:
+{title}
+
+Description:
+{description}
+
+Audience:
+{audience}
+
+Image Prompt:
+{image_prompt}
+
+SEO Tags:
+{seo_tags}
+
+Keywords:
+{keywords}
+
+Critic Review:
+{review}
+
+Return ONLY the improved product using this
+exact format:
+
+Title:
+<improved title>
+
+Description:
+<improved 150-300 word description>
+
+Audience:
+<ideal customer>
+
+Image Prompt:
+<improved image prompt>
+
+SEO Tags:
+tag1, tag2, tag3, tag4, tag5
+
+Keywords:
+keyword1, keyword2, keyword3, keyword4, keyword5
+
+Rules:
+
+- Preserve the original product concept.
+- Preserve the original niche.
+- Preserve the target audience unless the critic identifies
+  the audience as incorrect.
+- Fix every reasonable weakness identified by the critic.
+- Keep successful elements from the original product.
+- Do NOT create multiple products.
+- Do NOT create alternatives.
+- Do NOT include critic commentary.
+- Do NOT include strengths.
+- Do NOT include weaknesses.
+- Do NOT include suggestions.
+- Do NOT use Markdown.
+""",
+
+    expected_output="""
+Title:
+Description:
+Audience:
+Image Prompt:
+SEO Tags:
+Keywords:
+""",
+
+    agent=improvement_agent
+
 )

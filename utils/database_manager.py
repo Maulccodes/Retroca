@@ -5,18 +5,64 @@ import os
 DATABASE_FILE = "database/products.json"
 
 
+def ensure_database_directory():
+    """
+    Ensures the database directory exists.
+    """
+
+    database_directory = os.path.dirname(
+        DATABASE_FILE
+    )
+
+    if database_directory:
+        os.makedirs(
+            database_directory,
+            exist_ok=True
+        )
+
+
 def load_database():
     """
     Loads the products database.
+
+    Creates the database directory and
+    products.json file if they do not exist.
     """
 
-    # Create database if missing
-    if not os.path.exists(DATABASE_FILE):
-        with open(DATABASE_FILE, "w") as file:
-            json.dump([], file)
+    # -----------------------------------
+    # ENSURE DIRECTORY EXISTS
+    # -----------------------------------
 
-    # Load database
-    with open(DATABASE_FILE, "r") as file:
+    ensure_database_directory()
+
+    # -----------------------------------
+    # CREATE DATABASE IF MISSING
+    # -----------------------------------
+
+    if not os.path.exists(DATABASE_FILE):
+
+        with open(
+            DATABASE_FILE,
+            "w"
+        ) as file:
+
+            json.dump(
+                [],
+                file,
+                indent=4
+            )
+
+        return []
+
+    # -----------------------------------
+    # LOAD DATABASE
+    # -----------------------------------
+
+    with open(
+        DATABASE_FILE,
+        "r"
+    ) as file:
+
         return json.load(file)
 
 
@@ -25,8 +71,21 @@ def save_database(data):
     Saves updated database.
     """
 
-    with open(DATABASE_FILE, "w") as file:
-        json.dump(data, file, indent=4)
+    # Make sure the directory still exists
+    # before saving.
+
+    ensure_database_directory()
+
+    with open(
+        DATABASE_FILE,
+        "w"
+    ) as file:
+
+        json.dump(
+            data,
+            file,
+            indent=4
+        )
 
 
 def add_product(product_data):
@@ -36,8 +95,14 @@ def add_product(product_data):
 
     database = load_database()
 
-    database.append(product_data)
+    database.append(
+        product_data
+    )
 
-    save_database(database)
+    save_database(
+        database
+    )
 
-    print("Product added to master database.")
+    print(
+        "Product added to master database."
+    )
